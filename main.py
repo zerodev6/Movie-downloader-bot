@@ -1,7 +1,7 @@
 from pyrogram import Client
 from pyrogram.types import BotCommand
 from aiohttp import web
-from config import API_ID, API_HASH, BOT_TOKEN, PORT, WORKERS
+from config import API_ID, API_HASH, BOT_TOKEN, PORT, WORKERS, LOG_CHANNEL, DB_CHANNEL
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -26,6 +26,18 @@ class Bot(Client):
             BotCommand("info", "Check your account info")
         ])
         logging.info("Bot Started and Commands Set!")
+        
+        try:
+            await self.send_message(
+                LOG_CHANNEL,
+                "**🚀 Bot Started Successfully!**\n\n"
+                "**How to add movies:**\n"
+                f"1. Forward or upload your Video/Document files to your Database Channel (`{DB_CHANNEL}`).\n"
+                "2. Make sure the file has a clear filename or caption.\n"
+                "3. The bot will automatically index it and make it searchable for your users!"
+            )
+        except Exception as e:
+            logging.warning(f"Could not send startup message to LOG_CHANNEL: {e}")
 
     async def stop(self, *args):
         await super().stop()

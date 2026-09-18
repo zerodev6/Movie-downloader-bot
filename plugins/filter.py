@@ -28,16 +28,19 @@ async def file_indexer(client, message):
     await files_col.insert_one(file_data)
     await client.send_message(LOG_CHANNEL, f"**✅ Indexed:** `{file_name}`")
 
-@Client.on_message(filters.text & filters.group)
+@Client.on_message(filters.text & (filters.group | filters.private))
 async def auto_filter(client, message):
     query = message.text
     if query.startswith("/"): return
+    
+    search_msg = await message.reply("🔍 **Searching... Please wait...**")
     
     regex = re.compile(query, re.IGNORECASE)
     cursor = files_col.find({"$or": [{"file_name": regex}, {"caption": regex}]}).sort("date", -1).limit(10)
     results = await cursor.to_list(length=10)
     
     if not results:
+        await search_msg.edit(f"**❌ No results found for:** `{query}`\n\n_Please check your spelling and try again._")
         return
         
     buttons = []
@@ -47,11 +50,11 @@ async def auto_filter(client, message):
         buttons.append([InlineKeyboardButton(f"📁 {name} ({size} MB)", callback_data=f"getfile_{file['file_id']}")])
         
     if len(results) == 1:
-        text = f"**I found 1 result for:** `{query}`"
+        text = f"**✅ I found 1 result for:** `{query}`"
     else:
-        text = f"**I found {len(results)} results for:** `{query}`"
+        text = f"**✅ I found {len(results)} results for:** `{query}`"
         
-    await message.reply(text, reply_markup=InlineKeyboardMarkup(buttons))
+    await search_msg.edit(text, reply_markup=InlineKeyboardMarkup(buttons))
 
 @Client.on_callback_query(filters.regex(r"^getfile_"))
 @force_sub

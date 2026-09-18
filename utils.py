@@ -33,6 +33,10 @@ def force_sub(func):
         for channel in FORCE_SUB_CHANNELS.split(","):
             channel = channel.strip()
             if not channel: continue
+            
+            if channel.startswith("-100") or channel.isdigit():
+                channel = int(channel)
+                
             try:
                 chat = await client.get_chat(channel)
                 await client.get_chat_member(channel, user_id)
