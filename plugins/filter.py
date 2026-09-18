@@ -77,18 +77,12 @@ async def search_database(query, message_obj, page=1):
         
     buttons = []
     for file in results:
-        name = file['file_name'][:40] + "..." if len(file['file_name']) > 40 else file['file_name']
+        name = file['file_name']
         size = round(file['file_size'] / (1024 * 1024), 2)
         obj_id_str = str(file['_id'])
         
-        # Quality Filters (Visual)
-        quality = ""
-        if "2160p" in name.lower() or "4k" in name.lower(): quality = " [4K]"
-        elif "1080p" in name.lower(): quality = " [1080p]"
-        elif "720p" in name.lower(): quality = " [720p]"
-        elif "480p" in name.lower(): quality = " [480p]"
-        
-        buttons.append([InlineKeyboardButton(f"📁 {name}{quality} ({size} MB)", callback_data=f"getfile_{obj_id_str}")])
+        # We don't add the quality tags inline anymore, we just use the name
+        buttons.append([InlineKeyboardButton(f"📁 📁 FILENAME : {name}", callback_data=f"getfile_{obj_id_str}")])
         
     # Pagination controls
     nav_buttons = []
@@ -97,14 +91,14 @@ async def search_database(query, message_obj, page=1):
     # We will pass query directly but encode it safely in callback
     safe_query = query[:20] # keep it short for callback limit
     if page > 1:
-        nav_buttons.append(InlineKeyboardButton("⬅️ Previous", callback_data=f"page_{page-1}_{safe_query}"))
+        nav_buttons.append(InlineKeyboardButton("⬅️", callback_data=f"page_{page-1}_{safe_query}"))
     if page < total_pages:
-        nav_buttons.append(InlineKeyboardButton("Next ➡️", callback_data=f"page_{page+1}_{safe_query}"))
+        nav_buttons.append(InlineKeyboardButton("➡️", callback_data=f"page_{page+1}_{safe_query}"))
         
     if nav_buttons:
         buttons.append(nav_buttons)
         
-    text = f"**✅ I found {total_results} results for:** `{query}`\n\n**Page {page}/{total_pages}**"
+    text = f"✅ **I found {total_results} results for:** `{query}`\n\n**Page {page}/{total_pages}**"
     await message_obj.edit(text, reply_markup=InlineKeyboardMarkup(buttons))
 
 @Client.on_callback_query(filters.regex(r"^page_"))
@@ -139,19 +133,39 @@ async def get_file_callback(client, query):
     # Increment clicks for trending feature
     await files_col.update_one({"_id": ObjectId(obj_id)}, {"$inc": {"clicks": 1}})
         
-    await query.answer("Sending file...")
+    await query.message.edit(f"1. 📁 `FILENAME : {file['file_name']}`\n\n⚙️ SIZE : {round(file['file_size'] / (1024 * 1024), 2)} MB ({file.get('clicks', 0) + 1} downloads)")
     
     try:
         sent_msg = await query.message.reply_video(
             video=file["file_id"],
-            caption=file.get("caption", file["file_name"]) + f"\n\n_File will be deleted in {FILE_AUTO_DEL_TIMER//60} mins._",
-            protect_content=True
+            caption=f"📁 **FILENAME :** `{file['file_name']}`\n\n⚙️ **SIZE :** `{round(file['file_size'] / (1024 * 1024), 2)} MB`",
+            protect_content=True,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🚀 FAST DOWNLOAD / WATCH ONLINE 🖥", url="https://example.com")],
+                [InlineKeyboardButton("ℹ️ VIEW AUDIO & SUBS INFO ℹ️", callback_data="audio_info")],
+                [InlineKeyboardButton("📌 JOIN UPDATES CHANNEL 📌", url="https://t.me/example")]
+            ])
+        )
+        
+        await query.message.reply_text(
+            f"⚠️ **THIS MOVIE FILE/VIDEO WILL BE DELETED IN {FILE_AUTO_DEL_TIMER//60} MINUTE**\n\n>_PLEASE FORWARD THIS FILE TO SOMEWHERE ELSE & START DOWNLOADING THERE_",
+            quote=True
         )
     except Exception:
         sent_msg = await query.message.reply_document(
             document=file["file_id"],
-            caption=file.get("caption", file["file_name"]) + f"\n\n_File will be deleted in {FILE_AUTO_DEL_TIMER//60} mins._",
-            protect_content=True
+            caption=f"📁 **FILENAME :** `{file['file_name']}`\n\n⚙️ **SIZE :** `{round(file['file_size'] / (1024 * 1024), 2)} MB`",
+            protect_content=True,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🚀 FAST DOWNLOAD / WATCH ONLINE 🖥", url="https://example.com")],
+                [InlineKeyboardButton("ℹ️ VIEW AUDIO & SUBS INFO ℹ️", callback_data="audio_info")],
+                [InlineKeyboardButton("📌 JOIN UPDATES CHANNEL 📌", url="https://t.me/example")]
+            ])
+        )
+        
+        await query.message.reply_text(
+            f"⚠️ **THIS MOVIE FILE/VIDEO WILL BE DELETED IN {FILE_AUTO_DEL_TIMER//60} MINUTE**\n\n>_PLEASE FORWARD THIS FILE TO SOMEWHERE ELSE & START DOWNLOADING THERE_",
+            quote=True
         )
         
     # Schedule Auto-Delete
