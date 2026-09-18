@@ -1,0 +1,6 @@
+{
+  "name": "Telegram Movie & TV Series Auto-Filter Bot",
+  "description": "Source code and deployment package for an advanced Pyrogram-based Telegram Movie Auto-Filter bot with MongoDB integration, premium features, and force subscription.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

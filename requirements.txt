@@ -1,0 +1,8 @@
+pyrogram==2.0.106
+tgcrypto==1.2.5
+motor==3.3.1
+aiohttp==3.8.6
+psutil==5.9.5
+Cinemagoer==2023.5.1
+beautifulsoup4==4.12.2
+requests==2.31.0
