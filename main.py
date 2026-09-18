@@ -1,7 +1,7 @@
 from pyrogram import Client
-from pyrogram.types import BotCommand
+from pyrogram.types import BotCommand, BotCommandScopeDefault, BotCommandScopeChat
 from aiohttp import web
-from config import API_ID, API_HASH, BOT_TOKEN, PORT, WORKERS, LOG_CHANNEL, DB_CHANNEL
+from config import API_ID, API_HASH, BOT_TOKEN, PORT, WORKERS, LOG_CHANNEL, DB_CHANNEL, OWNER_ID
 import logging
 import asyncio
 from database import users_col, files_col
@@ -21,13 +21,28 @@ class Bot(Client):
     async def start(self):
         await super().start()
         
-        await self.set_bot_commands([
+        user_commands = [
             BotCommand("start", "Start the bot"),
             BotCommand("help", "How to use the bot"),
             BotCommand("about", "About the bot"),
-            BotCommand("info", "Check your account info")
-        ])
-        logging.info("Bot Started and Commands Set!")
+            BotCommand("info", "Check your account info"),
+            BotCommand("trending", "Top 10 Trending Movies"),
+            BotCommand("request", "Request a movie")
+        ]
+        
+        admin_commands = user_commands + [
+            BotCommand("stats", "Check bot statistics"),
+            BotCommand("broadcast", "Broadcast a message"),
+            BotCommand("deleteall", "Delete all indexed files")
+        ]
+        
+        try:
+            await self.set_bot_commands(user_commands, scope=BotCommandScopeDefault())
+            await self.set_bot_commands(admin_commands, scope=BotCommandScopeChat(chat_id=OWNER_ID))
+            logging.info("Bot Started and Scoped Commands Set!")
+        except Exception as e:
+            logging.warning(f"Could not set scoped commands: {e}")
+            logging.info("Bot Started!")
 
     async def stop(self, *args):
         await super().stop()
