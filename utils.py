@@ -34,8 +34,11 @@ def force_sub(func):
             channel = channel.strip()
             if not channel: continue
             
-            if channel.startswith("-100") or channel.isdigit():
-                channel = int(channel)
+            if isinstance(channel, str):
+                if channel.startswith("-100"):
+                    channel = int(channel)
+                elif channel.lstrip('-').isdigit():
+                    channel = int(channel)
                 
             try:
                 chat = await client.get_chat(channel)

@@ -19,6 +19,15 @@ class Bot(Client):
 
     async def start(self):
         await super().start()
+        
+        # Regroup handlers so text handlers don't override callback handlers or vice versa
+        disp = self.dispatcher
+        if 0 in disp.groups:
+            all_handlers = list(disp.groups[0])
+            for i, handler in enumerate(all_handlers):
+                disp.remove_handler(handler, group=0)
+                disp.add_handler(handler, group=i+1)
+
         await self.set_bot_commands([
             BotCommand("start", "Start the bot"),
             BotCommand("help", "How to use the bot"),
