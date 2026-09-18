@@ -1,4 +1,5 @@
 from pyrogram import Client
+from pyrogram.types import BotCommand
 from aiohttp import web
 from config import API_ID, API_HASH, BOT_TOKEN, PORT, WORKERS
 import logging
@@ -18,7 +19,13 @@ class Bot(Client):
 
     async def start(self):
         await super().start()
-        logging.info("Bot Started!")
+        await self.set_bot_commands([
+            BotCommand("start", "Start the bot"),
+            BotCommand("help", "How to use the bot"),
+            BotCommand("about", "About the bot"),
+            BotCommand("info", "Check your account info")
+        ])
+        logging.info("Bot Started and Commands Set!")
 
     async def stop(self, *args):
         await super().stop()

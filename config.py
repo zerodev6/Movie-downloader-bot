@@ -1,6 +1,13 @@
 import os
+import sys
+import logging
 
-API_ID = int(os.environ.get("API_ID", "123456"))
+try:
+    API_ID = int(os.environ.get("API_ID", "123456"))
+except ValueError:
+    logging.error("CRITICAL ERROR: API_ID must be a number! It looks like you pasted your API_HASH into the API_ID field.")
+    sys.exit(1)
+
 API_HASH = os.environ.get("API_HASH", "your_api_hash")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "your_bot_token")
 MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
