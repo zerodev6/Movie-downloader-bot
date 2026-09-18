@@ -132,45 +132,49 @@ async def get_file_callback(client, query):
 
     # Increment clicks for trending feature
     await files_col.update_one({"_id": ObjectId(obj_id)}, {"$inc": {"clicks": 1}})
+    
+    await query.answer("Sending file...")
         
     await query.message.edit(f"1. 📁 `FILENAME : {file['file_name']}`\n\n⚙️ SIZE : {round(file['file_size'] / (1024 * 1024), 2)} MB ({file.get('clicks', 0) + 1} downloads)")
     
+    caption_text = f"📁 **FILENAME :** `{file['file_name']}`\n\n⚙️ **SIZE :** `{round(file['file_size'] / (1024 * 1024), 2)} MB`"
+    markup = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🚀 FAST DOWNLOAD / WATCH ONLINE 🖥", url="https://example.com")],
+        [InlineKeyboardButton("ℹ️ VIEW AUDIO & SUBS INFO ℹ️", callback_data="audio_info")],
+        [InlineKeyboardButton("📌 JOIN UPDATES CHANNEL 📌", url="https://t.me/example")]
+    ])
+    
     try:
-        sent_msg = await query.message.reply_video(
+        sent_msg = await client.send_video(
+            chat_id=query.message.chat.id,
             video=file["file_id"],
-            caption=f"📁 **FILENAME :** `{file['file_name']}`\n\n⚙️ **SIZE :** `{round(file['file_size'] / (1024 * 1024), 2)} MB`",
+            caption=caption_text,
             protect_content=True,
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🚀 FAST DOWNLOAD / WATCH ONLINE 🖥", url="https://example.com")],
-                [InlineKeyboardButton("ℹ️ VIEW AUDIO & SUBS INFO ℹ️", callback_data="audio_info")],
-                [InlineKeyboardButton("📌 JOIN UPDATES CHANNEL 📌", url="https://t.me/example")]
-            ])
+            reply_markup=markup
         )
-        
-        await query.message.reply_text(
-            f"⚠️ **THIS MOVIE FILE/VIDEO WILL BE DELETED IN {FILE_AUTO_DEL_TIMER//60} MINUTE**\n\n>_PLEASE FORWARD THIS FILE TO SOMEWHERE ELSE & START DOWNLOADING THERE_",
-            quote=True
-        )
-    except Exception:
-        sent_msg = await query.message.reply_document(
-            document=file["file_id"],
-            caption=f"📁 **FILENAME :** `{file['file_name']}`\n\n⚙️ **SIZE :** `{round(file['file_size'] / (1024 * 1024), 2)} MB`",
-            protect_content=True,
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🚀 FAST DOWNLOAD / WATCH ONLINE 🖥", url="https://example.com")],
-                [InlineKeyboardButton("ℹ️ VIEW AUDIO & SUBS INFO ℹ️", callback_data="audio_info")],
-                [InlineKeyboardButton("📌 JOIN UPDATES CHANNEL 📌", url="https://t.me/example")]
-            ])
-        )
-        
-        await query.message.reply_text(
-            f"⚠️ **THIS MOVIE FILE/VIDEO WILL BE DELETED IN {FILE_AUTO_DEL_TIMER//60} MINUTE**\n\n>_PLEASE FORWARD THIS FILE TO SOMEWHERE ELSE & START DOWNLOADING THERE_",
-            quote=True
-        )
+    except Exception as e:
+        print(f"Failed to send video: {e}")
+        try:
+            sent_msg = await client.send_document(
+                chat_id=query.message.chat.id,
+                document=file["file_id"],
+                caption=caption_text,
+                protect_content=True,
+                reply_markup=markup
+            )
+        except Exception as doc_e:
+            print(f"Failed to send document: {doc_e}")
+            return
+            
+    warning_msg = await sent_msg.reply_text(
+        f"⚠️ **THIS MOVIE FILE/VIDEO WILL BE DELETED IN {FILE_AUTO_DEL_TIMER//60} MINUTE**\n\n>_PLEASE FORWARD THIS FILE TO SOMEWHERE ELSE & START DOWNLOADING THERE_",
+        quote=True
+    )
         
     # Schedule Auto-Delete
     await asyncio.sleep(FILE_AUTO_DEL_TIMER)
     try:
         await sent_msg.delete()
+        await warning_msg.delete()
     except:
         pass
