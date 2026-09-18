@@ -6,16 +6,20 @@ from database import files_col
 from utils import send_log, force_sub
 from config import DB_CHANNEL, LOG_CHANNEL, FILE_AUTO_DEL_TIMER
 
-@Client.on_message(filters.channel & filters.video)
+@Client.on_message(filters.channel & (filters.video | filters.document))
 async def file_indexer(client, message):
     if message.chat.id != DB_CHANNEL:
         return
         
-    file_name = message.caption or message.video.file_name or f"video_{message.id}.mkv"
+    media = message.video or message.document
+    if not media:
+        return
+
+    file_name = message.caption or getattr(media, 'file_name', f"file_{message.id}")
     file_data = {
-        "file_id": message.video.file_id, 
+        "file_id": media.file_id, 
         "file_name": file_name,
-        "file_size": message.video.file_size, 
+        "file_size": getattr(media, 'file_size', 0), 
         "message_id": message.id,
         "chat_id": message.chat.id, 
         "date": message.date,
@@ -26,7 +30,11 @@ async def file_indexer(client, message):
         return  # Duplicate check
         
     await files_col.insert_one(file_data)
-    await client.send_message(LOG_CHANNEL, f"**✅ Indexed:** `{file_name}`")
+    
+    try:
+        await client.send_message(LOG_CHANNEL, f"**✅ Indexed:** `{file_name}`")
+    except Exception as e:
+        print(f"Failed to log to channel: {e}")
 
 @Client.on_message(filters.text & (filters.group | filters.private))
 async def auto_filter(client, message):
@@ -68,10 +76,18 @@ async def get_file_callback(client, query):
         
     # Auto-Delete after FILE_AUTO_DEL_TIMER
     await query.answer("Sending file...")
-    sent_msg = await query.message.reply_video(
-        video=file["file_id"],
-        caption=file.get("caption", file["file_name"]) + f"\n\n_File will be deleted in {FILE_AUTO_DEL_TIMER//60} mins._"
-    )
+    
+    try:
+        sent_msg = await query.message.reply_video(
+            video=file["file_id"],
+            caption=file.get("caption", file["file_name"]) + f"\n\n_File will be deleted in {FILE_AUTO_DEL_TIMER//60} mins._"
+        )
+    except Exception:
+        # Fallback for documents
+        sent_msg = await query.message.reply_document(
+            document=file["file_id"],
+            caption=file.get("caption", file["file_name"]) + f"\n\n_File will be deleted in {FILE_AUTO_DEL_TIMER//60} mins._"
+        )
     
     await asyncio.sleep(FILE_AUTO_DEL_TIMER)
     try:
