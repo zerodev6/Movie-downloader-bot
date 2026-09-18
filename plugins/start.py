@@ -1,7 +1,7 @@
 import random
 import string
 import asyncio
-from pyrogram import Client, filters
+from pyrogram import Client, filters, StopPropagation
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from database import add_user, users_col, is_premium
 from utils import force_sub
@@ -36,14 +36,22 @@ def get_random_mix_id():
 @Client.on_message(filters.command("start") & filters.private)
 @force_sub
 async def start_cmd(client, message):
+    import state
+    if state.is_maintenance:
+        await message.reply("🚧 **Maintenance Mode** 🚧\n\nThe bot is currently undergoing maintenance. Please try again later.")
+        return
+
     await add_user(message.from_user.id, message.from_user.first_name, message.from_user.last_name, message.from_user.username, message.from_user.dc_id)
     
-    # 1. Send Sticker
-    sticker_msg = await message.reply_sticker("CAACAgIAAxkBAAEQZtFpgEdROhGouBVFD3e0K-YjmVHwsgACtCMAAphLKUjeub7NKlvk2TgE")
-    
-    # 2. Auto Delete Sticker
-    await asyncio.sleep(2)
-    await sticker_msg.delete()
+    try:
+        # 1. Send Sticker
+        sticker_msg = await message.reply_sticker("CAACAgIAAxkBAAEQZtFpgEdROhGouBVFD3e0K-YjmVHwsgACtCMAAphLKUjeub7NKlvk2TgE")
+        
+        # 2. Auto Delete Sticker
+        await asyncio.sleep(2)
+        await sticker_msg.delete()
+    except Exception:
+        pass
     
     # 3. Welcome Image
     welcome_image = f"{random.choice(PICS_URL)}?r={get_random_mix_id()}"
@@ -54,11 +62,20 @@ async def start_cmd(client, message):
         [InlineKeyboardButton("ℹ️ Help", callback_data="help"), InlineKeyboardButton("📊 Info", callback_data="about")]
     ])
     
-    await message.reply_photo(
-        photo=welcome_image,
-        caption=START_TXT.format(name=message.from_user.first_name),
-        reply_markup=buttons
-    )
+    try:
+        await message.reply_photo(
+            photo=welcome_image,
+            caption=START_TXT.format(name=message.from_user.first_name),
+            reply_markup=buttons
+        )
+    except Exception:
+        # Fallback to text only if image fails
+        await message.reply_text(
+            text=START_TXT.format(name=message.from_user.first_name),
+            reply_markup=buttons
+        )
+        
+    raise StopPropagation
 
 @Client.on_message(filters.command("info") & filters.private)
 async def info_cmd(client, message):
