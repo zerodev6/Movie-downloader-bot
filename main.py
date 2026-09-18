@@ -35,21 +35,6 @@ class Bot(Client):
             BotCommand("info", "Check your account info")
         ])
         logging.info("Bot Started and Commands Set!")
-        
-        try:
-            # Need to use an integer for chat_id in send_message, sometimes it gets cast wrong
-            log_id = int(LOG_CHANNEL)
-            db_id = int(DB_CHANNEL)
-            await self.send_message(
-                chat_id=log_id,
-                text="**🚀 Bot Started Successfully!**\n\n"
-                     "**How to add movies:**\n"
-                     f"1. Forward or upload your Video/Document files to your Database Channel (`{db_id}`).\n"
-                     "2. Make sure the file has a clear filename or caption.\n"
-                     "3. The bot will automatically index it and make it searchable for your users!"
-            )
-        except Exception as e:
-            logging.warning(f"Could not send startup message to LOG_CHANNEL: {e}")
 
     async def stop(self, *args):
         await super().stop()

@@ -38,12 +38,13 @@ async def file_indexer(client, message):
 
 @Client.on_message(filters.text & (filters.group | filters.private))
 async def auto_filter(client, message):
-    query = message.text
+    query = str(message.text)
     if query.startswith("/"): return
     
     search_msg = await message.reply("🔍 **Searching... Please wait...**")
     
-    regex = re.compile(query, re.IGNORECASE)
+    # Escape query to prevent regex syntax errors on special characters like [, *, (
+    regex = re.compile(re.escape(query), re.IGNORECASE)
     cursor = files_col.find({"$or": [{"file_name": regex}, {"caption": regex}]}).sort("date", -1).limit(10)
     results = await cursor.to_list(length=10)
     

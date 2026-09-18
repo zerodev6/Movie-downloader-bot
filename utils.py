@@ -35,9 +35,9 @@ def force_sub(func):
             if not channel: continue
             
             if isinstance(channel, str):
-                if channel.startswith("-100"):
-                    channel = int(channel)
-                elif channel.lstrip('-').isdigit():
+                # Fix accidental double minus signs in environment variables
+                channel = channel.replace('--', '-')
+                if channel.lstrip('-').isdigit():
                     channel = int(channel)
                 
             try:
