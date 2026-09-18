@@ -55,7 +55,9 @@ async def auto_filter(client, message):
     for file in results:
         name = file['file_name'][:40] + "..." if len(file['file_name']) > 40 else file['file_name']
         size = round(file['file_size'] / (1024 * 1024), 2)
-        buttons.append([InlineKeyboardButton(f"📁 {name} ({size} MB)", callback_data=f"getfile_{file['file_id']}")])
+        # file_id can be very long. We'll use the MongoDB _id (which is a 24-char hex string) instead of the Telegram file_id to guarantee it fits under 64 bytes.
+        obj_id_str = str(file['_id'])
+        buttons.append([InlineKeyboardButton(f"📁 {name} ({size} MB)", callback_data=f"getfile_{obj_id_str}")])
         
     if len(results) == 1:
         text = f"**✅ I found 1 result for:** `{query}`"
@@ -64,12 +66,18 @@ async def auto_filter(client, message):
         
     await search_msg.edit(text, reply_markup=InlineKeyboardMarkup(buttons))
 
+from bson.objectid import ObjectId
+
 @Client.on_callback_query(filters.regex(r"^getfile_"))
 @force_sub
 async def get_file_callback(client, query):
-    file_id = query.data.split("_")[1]
-    file = await files_col.find_one({"file_id": file_id})
+    obj_id = query.data.split("_")[1]
     
+    try:
+        file = await files_col.find_one({"_id": ObjectId(obj_id)})
+    except Exception:
+        file = None
+        
     if not file:
         await query.answer("File not found!", show_alert=True)
         return
